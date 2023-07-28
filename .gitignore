@@ -1,0 +1,16 @@
+## Based on https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
+## Only contains basic stuff as I don't use extensions or VS 2017 or below
+
+# Only contains Dialog.TrayLocation, which is used for the designer and is unimportant
+MockupForm.resx
+
+# User-specific files
+*.suo
+*.user
+
+# Build results
+bin/
+
+# Other Visual Studio directories
+obj/
+.vs/
