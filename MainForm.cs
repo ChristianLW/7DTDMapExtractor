@@ -9,18 +9,18 @@ namespace _7DTDMapExtractor {
 			SuspendLayout();
 			// MapFileSelector
 			MapFileSelector = new FileSelector("MapFileSelector", false);
-			MapFileSelector.Panel.Location = new Point(12, 12);
-			MapFileSelector.Panel.TabIndex = 0;
-			MapFileSelector.Label.Text = "Map File";
-			MapFileSelector.Dialog.Filter = "Player map files|*.map|All files|*.*";
-			MapFileSelector.Dialog.InitialDirectory = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "7DaysToDie");
+			MapFileSelector.Location = new Point(12, 12);
+			MapFileSelector.TabIndex = 0;
+			MapFileSelector.LabelText = "Map File";
+			MapFileSelector.Filter = "Player map files|*.map|All files|*.*";
+			MapFileSelector.InitialDirectory = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "7DaysToDie");
 			// ImageFileSelector
 			OutputImageFileSelector = new FileSelector("OutputImageFileSelector", true);
-			OutputImageFileSelector.Panel.Location = new Point(12, 41);
-			OutputImageFileSelector.Panel.TabIndex = 1;
-			OutputImageFileSelector.Label.Text = "Output File";
-			OutputImageFileSelector.Dialog.Filter = "PNG files|*.png|All files|*.*";
-			OutputImageFileSelector.Dialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+			OutputImageFileSelector.Location = new Point(12, 41);
+			OutputImageFileSelector.TabIndex = 1;
+			OutputImageFileSelector.LabelText = "Output File";
+			OutputImageFileSelector.Filter = "PNG files|*.png|All files|*.*";
+			OutputImageFileSelector.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
 			// ExtractButton
 			ExtractButton = new Button();
 			ExtractButton.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
@@ -31,7 +31,7 @@ namespace _7DTDMapExtractor {
 			ExtractButton.Text = "Extract";
 			ExtractButton.UseVisualStyleBackColor = true;
 			ExtractButton.Click += (object sender, EventArgs e) => {
-				MapExtractor.Extract(MapFileSelector.TextBox.Text, OutputImageFileSelector.TextBox.Text, ProgressBar, StatusLabel);
+				MapExtractor.Extract(MapFileSelector.FileName, OutputImageFileSelector.FileName, ProgressBar, StatusLabel);
 			};
 			// StatusLabel
 			StatusLabel = new Label();
@@ -55,8 +55,8 @@ namespace _7DTDMapExtractor {
 			MinimumSize = Size;
 			Name = "MainForm";
 			Text = "7 Days to Die Map Extractor";
-			Controls.Add(MapFileSelector.Panel);
-			Controls.Add(OutputImageFileSelector.Panel);
+			Controls.Add(MapFileSelector);
+			Controls.Add(OutputImageFileSelector);
 			Controls.Add(ExtractButton);
 			Controls.Add(StatusLabel);
 			Controls.Add(ProgressBar);
@@ -74,26 +74,29 @@ namespace _7DTDMapExtractor {
 		///		Everything is contained within a panel which stretches horizontally.
 		///		Based on https://www.techcoil.com/blog/implement-a-file-chooser-in-windows-form/.
 		/// </summary>
-		class FileSelector {
-			public readonly Panel Panel;
+		class FileSelector : Panel {
 			public readonly Label Label;
 			public readonly TextBox TextBox;
 			public readonly Button Button;
 			public readonly FileDialog Dialog;
 
+			public string LabelText { get => Label.Text; set => Label.Text = value; }
+			public string Filter { get => Dialog.Filter; set => Dialog.Filter = value; }
+			public string InitialDirectory { get; set; }
+			public string FileName => TextBox.Text;
+
 			/// <param name="namePrefix">The prefix prepended to the name of all the controls.</param>
 			/// <param name="isSave">Whether the FileDialog will be a SaveFileDialog or an OpenFileDialog.</param>
 			public FileSelector(string namePrefix, bool isSave) {
-				Panel = new Panel();
 				Label = new Label();
 				TextBox = new TextBox();
 				Button = new Button();
 				Dialog = isSave ? new SaveFileDialog() : new OpenFileDialog();
-				Panel.SuspendLayout();
+				SuspendLayout();
 				// Panel
-				Panel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-				Panel.Size = new Size(376, 23);
-				Panel.Name = namePrefix + "Panel";
+				Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+				Size = new Size(376, 23);
+				Name = namePrefix + "Panel";
 				// Label
 				Label.AutoSize = true;
 				Label.Location = new Point(0, 4);
@@ -114,17 +117,19 @@ namespace _7DTDMapExtractor {
 				Button.Text = "Browse";
 				Button.UseVisualStyleBackColor = true;
 				Button.Click += (object sender, EventArgs e) => {
-					Dialog.FileName = TextBox.Text;
+					string dir = Path.GetDirectoryName(TextBox.Text);
+					Dialog.FileName = Path.GetFileName(TextBox.Text);
+					Dialog.InitialDirectory = string.IsNullOrEmpty(dir) ? InitialDirectory : dir;
 					if (Dialog.ShowDialog() == DialogResult.OK) {
 						TextBox.Text = Dialog.FileName;
 					}
 				};
 				// Finals
-				Panel.Controls.Add(Label);
-				Panel.Controls.Add(TextBox);
-				Panel.Controls.Add(Button);
-				Panel.ResumeLayout(false);
-				Panel.PerformLayout();
+				Controls.Add(Label);
+				Controls.Add(TextBox);
+				Controls.Add(Button);
+				ResumeLayout(false);
+				PerformLayout();
 			}
 		}
 	}
