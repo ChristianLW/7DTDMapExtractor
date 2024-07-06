@@ -13,9 +13,17 @@ namespace _7DTDMapExtractor {
 		private const int MAX_CHUNK = MAP_SIZE / 16 / 2;
 
 		public static void Extract(string mapFile, string outputFile, ProgressBar progressBar, Label statusLabel) {
+			IntPtr imageDataPtr = IntPtr.Zero;
 			try {
 				using FileStream inputStream = File.Open(mapFile, FileMode.Open, FileAccess.Read, FileShare.Read);
 				using BinaryReader reader = new BinaryReader(inputStream);
+				/*  ---------------------  */
+				/*  Image Data Allocation  */
+				/*  ---------------------  */
+				imageDataPtr = Marshal.AllocHGlobal(MAP_SIZE * MAP_SIZE * sizeof(ushort));
+				Span<ushort> imageData;
+				unsafe { imageData = new Span<ushort>(imageDataPtr.ToPointer(), MAP_SIZE * MAP_SIZE); }
+				imageData.Clear();
 				progressBar.Value = 0;
 				statusLabel.ForeColor = Color.DarkGreen;
 				/*  ------  */
@@ -47,22 +55,6 @@ namespace _7DTDMapExtractor {
 				}
 				// Unused space
 				inputStream.Seek(0x10 + maxChunks * 4, SeekOrigin.Begin);
-				/*  ---------------------  */
-				/*  Image Data Allocation  */
-				/*  ---------------------  */
-				statusLabel.Text = "Allocating and initialising image data";
-				statusLabel.Refresh();
-				progressBar.Value = 0;
-				progressBar.Maximum = MAP_SIZE * MAP_SIZE;
-				// Using a small zero-filled buffer here to *significantly*
-				// speed up the zero-filling of the image data buffer
-				// Writing the bytes individually directly in C# is really inefficient
-				byte[] zeroBuffer = new byte[4096];
-				IntPtr imageData = Marshal.AllocHGlobal(MAP_SIZE * MAP_SIZE * 2);
-				for (int i = 0; i < (MAP_SIZE * MAP_SIZE * 2) >> 12; i++) {
-					Marshal.Copy(zeroBuffer, 0, imageData + (i << 12), 4096);
-					progressBar.Value = i;
-				}
 				/*  -----------  */
 				/*  Colour Data  */
 				/*  -----------  */
@@ -77,8 +69,8 @@ namespace _7DTDMapExtractor {
 						for (int y = 0; y < 16; y++) {
 							for (int x = 0; x < 16; x++) {
 								ushort colour = reader.ReadUInt16();
-								int offset = ((x + cx * 16 + MAP_SIZE / 2) + (MAP_SIZE - 1 - (y + cy * 16 + MAP_SIZE / 2)) * MAP_SIZE) * 2;
-								Marshal.WriteInt16(imageData, offset, (short)(colour | 0x8000));
+								int index = (x + cx * 16 + MAP_SIZE / 2) + (MAP_SIZE - 1 - (y + cy * 16 + MAP_SIZE / 2)) * MAP_SIZE;
+								imageData[index] = (ushort)(colour | 0x8000);
 							}
 						}
 					} else {
@@ -89,10 +81,9 @@ namespace _7DTDMapExtractor {
 				statusLabel.Text = "Saving image";
 				statusLabel.Refresh();
 				using (FileStream outputStream = File.Open(outputFile, FileMode.Create, FileAccess.Write, FileShare.None)) {
-					using Bitmap bitmap = new Bitmap(MAP_SIZE, MAP_SIZE, MAP_SIZE * 2, PixelFormat.Format16bppArgb1555, imageData);
+					using Bitmap bitmap = new Bitmap(MAP_SIZE, MAP_SIZE, MAP_SIZE * sizeof(ushort), PixelFormat.Format16bppArgb1555, imageDataPtr);
 					bitmap.Save(outputStream, ImageFormat.Png);
 				}
-				Marshal.FreeHGlobal(imageData);
 				statusLabel.Text = "Done!";
 				progressBar.Value = 0;
 			} catch (Exception e) {
@@ -106,6 +97,10 @@ namespace _7DTDMapExtractor {
 					_ => "Something went wrong"
 				};
 				statusLabel.Text = errorMessage;
+			} finally {
+				// Make sure to free the image data, no matter what
+				// In case nothing was ever allocated, this'll just do nothing
+				Marshal.FreeHGlobal(imageDataPtr);
 			}
 		}
 	}

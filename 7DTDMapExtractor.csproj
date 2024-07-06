@@ -9,6 +9,7 @@
 		<Product>7DTD Map Extractor</Product>
 		<Company>Bebeu</Company>
 		<Copyright>Copyright © Bebeu 2024</Copyright>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 	<ItemGroup>
 		<Compile Remove="MockupForm.cs;MockupForm.Designer.cs" Condition="'$(Configuration)' == 'Release'"/>
