@@ -30,9 +30,7 @@ namespace _7DTDMapExtractor {
 			ExtractButton.TabIndex = 2;
 			ExtractButton.Text = "Extract";
 			ExtractButton.UseVisualStyleBackColor = true;
-			ExtractButton.Click += (object sender, EventArgs e) => {
-				MapExtractor.Extract(MapFileSelector.FileName, OutputImageFileSelector.FileName, ProgressBar, StatusLabel);
-			};
+			ExtractButton.Click += (object sender, EventArgs e) => Extract();
 			// StatusLabel
 			StatusLabel = new Label();
 			StatusLabel.AutoSize = true;
@@ -61,6 +59,36 @@ namespace _7DTDMapExtractor {
 			Controls.Add(StatusLabel);
 			Controls.Add(ProgressBar);
 			ResumeLayout(false);
+		}
+
+		public void Extract() {
+			StatusLabel.ForeColor = Color.DarkGreen;
+			try {
+				MapExtractor.Extract(
+					MapFileSelector.FileName,
+					OutputImageFileSelector.FileName,
+					progress => {
+						ProgressBar.Value = progress;
+					}, progressMax => {
+						ProgressBar.Refresh();
+						ProgressBar.Value = 0;
+						ProgressBar.Maximum = progressMax;
+					}, status => {
+						StatusLabel.Text = status;
+						StatusLabel.Refresh();
+					}
+				);
+			} catch (Exception e) {
+				StatusLabel.ForeColor = Color.DarkRed;
+				StatusLabel.Text = e switch {
+					ArgumentException => "You have to specify a file",
+					DirectoryNotFoundException => "Directory doesn't exist",
+					FileNotFoundException => "File doesn't exist",
+					FileFormatException => e.Message,
+					NotSupportedException => e.Message,
+					_ => "Something went wrong"
+				};
+			}
 		}
 
 		private readonly FileSelector MapFileSelector;

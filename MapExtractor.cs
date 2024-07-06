@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Windows.Forms;
 using System.Runtime.InteropServices;
 
 namespace _7DTDMapExtractor {
@@ -12,7 +11,7 @@ namespace _7DTDMapExtractor {
 		private const int MAP_SIZE = 6144;
 		private const int MAX_CHUNK = MAP_SIZE / 16 / 2;
 
-		public static void Extract(string mapFile, string outputFile, ProgressBar progressBar, Label statusLabel) {
+		public static void Extract(string mapFile, string outputFile, Action<int> updateProgress, Action<int> newProgressStage, Action<string> updateStatus) {
 			IntPtr imageDataPtr = IntPtr.Zero;
 			try {
 				using FileStream inputStream = File.Open(mapFile, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -24,13 +23,10 @@ namespace _7DTDMapExtractor {
 				Span<ushort> imageData;
 				unsafe { imageData = new Span<ushort>(imageDataPtr.ToPointer(), MAP_SIZE * MAP_SIZE); }
 				imageData.Clear();
-				progressBar.Value = 0;
-				statusLabel.ForeColor = Color.DarkGreen;
 				/*  ------  */
 				/*  Header  */
 				/*  ------  */
-				statusLabel.Text = "Reading header";
-				statusLabel.Refresh();
+				updateStatus?.Invoke("Reading header");
 				if (new string(reader.ReadChars(4)) != MAGIC) {
 					throw new FileFormatException("Invalid magic bytes");
 				}
@@ -42,26 +38,23 @@ namespace _7DTDMapExtractor {
 				inputStream.Seek(3, SeekOrigin.Current);
 				int maxChunks = reader.ReadInt32();
 				int numChunks = reader.ReadInt32();
-				progressBar.Maximum = numChunks - 1;
 				/*  -----------------  */
 				/*  Chunk Coordinates  */
 				/*  -----------------  */
-				statusLabel.Text = "Reading chunk coordinates";
-				statusLabel.Refresh();
+				updateStatus?.Invoke("Reading chunk coordinates");
+				newProgressStage?.Invoke(numChunks - 1);
 				uint[] chunkCoordinates = new uint[numChunks];
 				for (int i = 0; i < numChunks; i++) {
 					chunkCoordinates[i] = reader.ReadUInt32();
-					progressBar.Value = i;
+					updateProgress?.Invoke(i);
 				}
 				// Unused space
 				inputStream.Seek(0x10 + maxChunks * 4, SeekOrigin.Begin);
 				/*  -----------  */
 				/*  Colour Data  */
 				/*  -----------  */
-				statusLabel.Text = "Reading colour data and painting image";
-				statusLabel.Refresh();
-				progressBar.Value = 0;
-				progressBar.Maximum = numChunks - 1;
+				updateStatus?.Invoke("Reading colour data and painting image");
+				newProgressStage?.Invoke(numChunks - 1);
 				for (int i = 0; i < numChunks; i++) {
 					int cx = (short)(chunkCoordinates[i] & 0xFFFFU);
 					int cy = (short)(chunkCoordinates[i] >> 16);
@@ -76,27 +69,15 @@ namespace _7DTDMapExtractor {
 					} else {
 						inputStream.Seek(512, SeekOrigin.Current);
 					}
-					progressBar.Value = i;
+					updateProgress?.Invoke(i);
 				}
-				statusLabel.Text = "Saving image";
-				statusLabel.Refresh();
+				updateStatus?.Invoke("Saving image");
 				using (FileStream outputStream = File.Open(outputFile, FileMode.Create, FileAccess.Write, FileShare.None)) {
 					using Bitmap bitmap = new Bitmap(MAP_SIZE, MAP_SIZE, MAP_SIZE * sizeof(ushort), PixelFormat.Format16bppArgb1555, imageDataPtr);
 					bitmap.Save(outputStream, ImageFormat.Png);
 				}
-				statusLabel.Text = "Done!";
-				progressBar.Value = 0;
-			} catch (Exception e) {
-				statusLabel.ForeColor = Color.DarkRed;
-				string errorMessage = e switch {
-					ArgumentException => "You have to specify a file",
-					DirectoryNotFoundException => "Directory doesn't exist",
-					FileNotFoundException => "Map file doesn't exist",
-					FileFormatException => e.Message,
-					NotSupportedException => e.Message,
-					_ => "Something went wrong"
-				};
-				statusLabel.Text = errorMessage;
+				updateStatus?.Invoke("Done!");
+				newProgressStage?.Invoke(1);
 			} finally {
 				// Make sure to free the image data, no matter what
 				// In case nothing was ever allocated, this'll just do nothing
