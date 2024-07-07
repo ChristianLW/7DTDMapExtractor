@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -61,23 +62,24 @@ namespace _7DTDMapExtractor {
 			ResumeLayout(false);
 		}
 
-		public void Extract() {
+		public async void Extract() {
+			ExtractButton.Enabled = false;
 			StatusLabel.ForeColor = Color.DarkGreen;
 			try {
-				MapExtractor.Extract(
+				await Task.Run(() => MapExtractor.Extract(
 					MapFileSelector.FileName,
 					OutputImageFileSelector.FileName,
-					progress => {
+					progress => ProgressBar.Invoke(() => {
 						ProgressBar.Value = progress;
-					}, progressMax => {
+					}), progressMax => ProgressBar.Invoke(() => {
 						ProgressBar.Refresh();
 						ProgressBar.Value = 0;
 						ProgressBar.Maximum = progressMax;
-					}, status => {
+					}), status => StatusLabel.Invoke(() => {
 						StatusLabel.Text = status;
 						StatusLabel.Refresh();
-					}
-				);
+					})
+				));
 			} catch (Exception e) {
 				StatusLabel.ForeColor = Color.DarkRed;
 				StatusLabel.Text = e switch {
@@ -89,6 +91,7 @@ namespace _7DTDMapExtractor {
 					_ => "Something went wrong"
 				};
 			}
+			ExtractButton.Enabled = true;
 		}
 
 		private readonly FileSelector MapFileSelector;
