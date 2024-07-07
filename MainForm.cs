@@ -12,7 +12,7 @@ namespace _7DTDMapExtractor {
 			MapFileSelector.Location = new Point(12, 12);
 			MapFileSelector.TabIndex = 0;
 			MapFileSelector.LabelText = "Map File";
-			MapFileSelector.Filter = "Player map files|*.map|All files|*.*";
+			MapFileSelector.Filter = "Player map files|*.map;*.7rm|All files|*.*";
 			MapFileSelector.InitialDirectory = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "7DaysToDie");
 			// ImageFileSelector
 			OutputImageFileSelector = new FileSelector("OutputImageFileSelector", true);
