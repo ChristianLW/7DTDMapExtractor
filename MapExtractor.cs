@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.IO.Compression;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
@@ -37,16 +38,40 @@ namespace _7DTDMapExtractor {
 				/*  Final Stuff  */
 				/*  -----------  */
 				updateStatus?.Invoke("Saving image");
-				using (FileStream outputStream = File.Open(outputFile, FileMode.Create, FileAccess.Write, FileShare.None)) {
-					using Bitmap bitmap = new Bitmap(MAP_SIZE, MAP_SIZE, MAP_SIZE * sizeof(ushort), PixelFormat.Format16bppArgb1555, imageDataPtr);
-					bitmap.Save(outputStream, ImageFormat.Png);
-				}
+				SaveImage(outputFile, imageDataPtr);
 				updateStatus?.Invoke("Done!");
 				newProgressStage?.Invoke(1);
 			} finally {
 				// Make sure to free the image data, no matter what
 				// In case nothing was ever allocated, this'll just do nothing
 				Marshal.FreeHGlobal(imageDataPtr);
+			}
+		}
+
+		private static void SaveImage(string outputFile, IntPtr imageDataPtr) {
+			// This function only exists because you can't prevent Bitmap from writing a few extra PNG chunks
+			// including physical size, which doesn't make any sense for an image like this
+			byte[] buffer;
+			int length;
+			// Give it an initial capacity of 256k to avoid a bunch of tiny reallocations
+			using (MemoryStream memStream = new MemoryStream(256 * 1024)) {
+				using Bitmap bitmap = new Bitmap(MAP_SIZE, MAP_SIZE, MAP_SIZE * sizeof(ushort), PixelFormat.Format16bppArgb1555, imageDataPtr);
+				bitmap.Save(memStream, ImageFormat.Png);
+				buffer = memStream.GetBuffer();
+				length = (int)memStream.Length;
+			}
+			using FileStream outputStream = File.Open(outputFile, FileMode.Create, FileAccess.Write, FileShare.None);
+			// Start by writing the PNG signature
+			outputStream.Write(buffer, 0, 8);
+			int pos = 8;
+			while (pos < length) {
+				int chunkLength = BinaryPrimitives.ReadInt32BigEndian(buffer.AsSpan(pos));
+				chunkLength += 12;
+				// Only write critical chunks
+				if (((buffer[pos + 4] >> 5) & 1) == 0) {
+					outputStream.Write(buffer, pos, chunkLength);
+				}
+				pos += chunkLength;
 			}
 		}
 
