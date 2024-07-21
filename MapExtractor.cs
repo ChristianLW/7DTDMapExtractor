@@ -138,6 +138,11 @@ namespace _7DTDMapExtractor {
 			updateStatus?.Invoke("Reading colour data and painting image");
 			newProgressStage?.Invoke(files.Count);
 			int progress = 0;
+			// Using a buffer both for performance and for being able to check whether a chunk should be drawn
+			const int bytesPerChunk = 16 * 16 * sizeof(ushort);
+			byte[] buffer = new byte[bytesPerChunk * CHUNKS_IN_REGION];
+			using MemoryStream memStream = new MemoryStream(buffer);
+			using BinaryReader reader = new BinaryReader(memStream);
 			foreach (string mapFile in files) {
 				/*  -----------------  */
 				/*  Chunk Coordinates  */
@@ -169,14 +174,16 @@ namespace _7DTDMapExtractor {
 				/*  -----------  */
 				/*  Colour Data  */
 				/*  -----------  */
-				// Also uses a BufferedStream to speed up reading (ReadUInt16 used 96% CPU before)
-				// 16384 happens to be one row's worth of chunk data and also a decent buffer size here
 				using GZipStream gzipStream = new GZipStream(inputStream, CompressionMode.Decompress);
-				using BufferedStream bufferedStream = new BufferedStream(gzipStream, 16384);
-				using BinaryReader reader = new BinaryReader(bufferedStream);
 				for (int y = 0; y < CHUNKS_IN_REGION; y++) {
+					memStream.Position = 0;
+					gzipStream.ReadExactly(buffer);
 					for (int x = 0; x < CHUNKS_IN_REGION; x++) {
-						PaintChunk(cx + x, cy + y, reader, imageData);
+						if (new ReadOnlySpan<byte>(buffer, x * bytesPerChunk, bytesPerChunk).ContainsAnyExcept((byte)0)) {
+							PaintChunk(cx + x, cy + y, reader, imageData);
+						} else {
+							memStream.Position += bytesPerChunk;
+						}
 					}
 				}
 				// Only bother updating after a whole region, because otherwise the program
