@@ -4,12 +4,13 @@
 		<TargetFramework>net8.0-windows</TargetFramework>
 		<RootNamespace>_7DTDMapExtractor</RootNamespace>
 		<UseWindowsForms>true</UseWindowsForms>
-		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-		<AssemblyTitle>$(Product)</AssemblyTitle>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<Product>7DTD Map Extractor</Product>
+		<Version>2.0.0</Version>
 		<Company>Bebeu</Company>
 		<Copyright>Copyright © Bebeu 2024</Copyright>
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<AssemblyTitle>$(Product)</AssemblyTitle>
+		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)' == 'Release'">
