@@ -10,7 +10,20 @@
 		<Company>Bebeu</Company>
 		<Copyright>Copyright © Bebeu 2024</Copyright>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)' == 'Release'">
+		<DebugType>none</DebugType>
+	</PropertyGroup>
+	<Target Name="FixDeps" AfterTargets="GenerateBuildDependencyFile" BeforeTargets="CopyFilesToOutputDirectory">
+		<Exec Command="pwsh -NoProfile FixJson.ps1 $(ProjectDepsFilePath)"/>
+	</Target>
+	<Target Name="FixPublishDeps" AfterTargets="GeneratePublishDependencyFile" BeforeTargets="CopyFilesToPublishDirectory">
+		<Exec Command="pwsh -NoProfile FixJson.ps1 $(IntermediateDepsFilePath)"/>
+	</Target>
+	<Target Name="FixRuntimeConfig" AfterTargets="GenerateBuildRuntimeConfigurationFiles" BeforeTargets="CopyFilesToOutputDirectory">
+		<Exec Command="pwsh -NoProfile FixJson.ps1 $(ProjectRuntimeConfigFilePath)"/>
+	</Target>
 	<ItemGroup>
 		<Compile Remove="MockupForm.cs;MockupForm.Designer.cs" Condition="'$(Configuration)' == 'Release'"/>
 		<EmbeddedResource Remove="MockupForm.resx" Condition="'$(Configuration)' == 'Release'"/>
